@@ -229,7 +229,11 @@
                 </h5>
 
                 <h4 class="font-weight-bold blue-text">
+                  {% if item.price_after_disc %}
+                  <strong>${{ item.price_after_disc }}</strong>
+                  {% else %}
                   <strong>${{ item.price }}</strong>
+                  {% endif %}
                 </h4>
 
               </div>

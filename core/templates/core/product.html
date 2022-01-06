@@ -35,18 +35,20 @@
             </div>
 
             <p class="lead">
+              {% if item.price_after_disc %}
               <span class="mr-1">
-                <del>$200</del>
+                <del>${{item.price}}</del>
               </span>
-              <span>$100</span>
+              <span>${{item.price_after_disc}}</span>
+              {% else %}
+              <span>${{item.price}}</span>
+              {% endif %}
             </p>
 
             <p class="lead font-weight-bold">Description</p>
 
-            <p>Lorem ipsum dolor sit amet consectetur adipisicing elit. Et dolor suscipit libero eos atque quia ipsa
-              sint voluptatibus!
-              Beatae sit assumenda asperiores iure at maxime atque repellendus maiores quia sapiente.</p>
-
+            <p>{{item.description}}</p>
+            {% comment %}
             <form class="d-flex justify-content-left">
               <!-- Default input -->
               <input type="number" value="1" aria-label="Search" class="form-control" style="width: 100px">
@@ -55,7 +57,14 @@
               </button>
 
             </form>
-
+            {% endcomment %}
+            <a href="{{ item.get_add_to_cart_url }}" class="btn btn-primary btn-md my-0 p">Add to cart
+              <i class="fas fa-shopping-cart ml-1"></i>
+            </a>
+          </div>
+          <a href="{{ item.get_remove_from_cart_url }}" class="btn btn-danger btn-md my-0 p">Remove From cart
+              <i class="fas fa-shopping-cart ml-1"></i>
+            </a>
           </div>
           <!--Content-->
 
@@ -111,7 +120,6 @@
 
         </div>
         <!--Grid column-->
-
       </div>
       <!--Grid row-->
 
