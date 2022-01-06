@@ -10,7 +10,9 @@ from .models import Item, OrderItem, Order
 
 class HomeView(ListView):
 	model = Item
+	paginate_by = 12
 	template_name = 'core/home-page.html'
+
 
 class ProductDetailView(DetailView):
 	model = Item
