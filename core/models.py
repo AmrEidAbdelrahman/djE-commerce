@@ -22,7 +22,7 @@ class Item(models.Model):
 	title = models.CharField(max_length=100)
 	description = models.TextField()
 	price = models.IntegerField(default=120)
-	price_after_disc = models.IntegerField(default=0)
+	price_after_disc = models.IntegerField(null=True, blank=True)
 	category = models.CharField(choices=CATEGORY_CHOICES, max_length=2)
 	label = models.CharField(choices=LABELCHOICES, max_length=1)
 	
@@ -40,6 +40,8 @@ class Item(models.Model):
 		return reverse("core:remove-from-cart" , kwargs={'pk': self.id})
 
 
+
+
 class OrderItem(models.Model):
 	user = models.ForeignKey(User, on_delete=models.CASCADE, null=True)
 	ordered = models.BooleanField(default=False)
@@ -48,6 +50,15 @@ class OrderItem(models.Model):
 
 	def __str__(self):
 		return f'{self.quantity} of {self.item.title}'
+
+	def get_total_price(self):
+		return self.item.price * self.quantity
+
+	def get_total_price_after_disc(self):
+		return self.quantity * self.item.price_after_disc
+
+	def get_total_disc(self):
+		return int(self.get_total_price - self.get_total_price_after_disc)
 
 
 class Order(models.Model):
@@ -60,3 +71,13 @@ class Order(models.Model):
 	def __str__(self):
 		return f'{self.user.username} on {self.start_date}'
 
+
+	def get_order_total_price(self):
+		sum = 0
+		for order_item in self.items.all():
+			if order_item.item.price_after_disc:
+				sum += order_item.get_total_price_after_disc()
+			else:
+				sum += order_item.get_total_price()
+
+		return sum
