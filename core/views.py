@@ -33,6 +33,7 @@ class CheckoutView(View):
 
 
 def add_to_cart(request, pk):
+	redirect_to = request.GET.get('redirect_to', 'core:product')
 	item = get_object_or_404(Item, id=pk)
 	order_item, created = OrderItem.objects.get_or_create(item=item, user=request.user, ordered=False)
 	order_qs = Order.objects.filter(user=request.user, ordered=False)
@@ -50,7 +51,10 @@ def add_to_cart(request, pk):
 		order.items.add(order_item)
 		messages.info(request, 'Start new Order and Add the item successfuly.')
 
-	return redirect("core:product", pk=pk)
+	if redirect_to == "core:product":
+		return redirect(redirect_to, pk=pk)
+	else:
+		return redirect(redirect_to)
 
 
 def remove_from_cart(request, pk):
@@ -83,3 +87,25 @@ def remove_from_cart(request, pk):
 			return redirect(redirect_to, pk=pk)
 		else:
 			return redirect(redirect_to)
+
+
+def decrease_single_item_from_cart(request, pk):
+	item = get_object_or_404(Item, id=pk)
+	order_item, created = OrderItem.objects.get_or_create(item=item, user=request.user, ordered=False)
+	order_qs = Order.objects.filter(user=request.user, ordered=False)
+	if order_qs.exists():
+		order = order_qs[0]
+		if order.items.filter(item__id=pk).exists():
+			if order_item.quantity > 1: 
+				order_item.quantity -= 1
+				order_item.save()
+			else:
+				order.items.remove(order_item)
+				order_item.delete()
+			messages.info(request, 'the item decreased successfuly.')
+		else:
+			messages.info(request, 'this item isnot in your cart righ now !')
+	else:
+		messages.info(request, 'Sorry, No active order')
+
+	return redirect("core:order-summary")
