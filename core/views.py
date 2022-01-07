@@ -3,6 +3,7 @@ from django.views.generic import ListView, DetailView, View
 from django.utils import timezone
 from django.contrib import messages
 
+from .forms import CheckoutForm
 from .models import Item, OrderItem, Order
 
 
@@ -29,7 +30,23 @@ class ProductDetailView(DetailView):
 
 class CheckoutView(View):
 	def get(self, *args, **kwargs):
-		return render(self.request, 'core/checkout.html')
+		form = CheckoutForm()
+		context = {
+			'form': form
+		}
+		return render(self.request, 'core/checkout.html', context)
+
+	def post(self, *args, **kwargs):
+		print("##################################")
+		form = CheckoutForm(self.request.POST or None)
+		print(self.request.POST)
+		if form.is_valid():
+			print(form.cleaned_data)
+			print("#####THIS FORM IS VALID#####")
+			return redirect('core:checkout')
+		messages.info(self.request, "THIS FORM INVALID....")
+		return redirect('core:checkout')
+
 
 
 def add_to_cart(request, pk):

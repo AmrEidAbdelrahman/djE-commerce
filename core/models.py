@@ -1,6 +1,7 @@
 from django.db import models
 
 from django.urls import reverse
+from django_countries.fields import CountryField
 
 from django.contrib.auth.models import User
 # Create your models here.
@@ -67,6 +68,7 @@ class Order(models.Model):
 	start_date = models.DateTimeField(auto_now_add=True)
 	ordered_date = models.DateTimeField()
 	ordered = models.BooleanField(default=False)
+	billing_address = models.ForeignKey('BillingAddress', on_delete=models.SET_NULL, null=True, blank=True)
 
 	def __str__(self):
 		return f'{self.user.username} on {self.start_date}'
@@ -81,3 +83,15 @@ class Order(models.Model):
 				sum += order_item.get_total_price()
 
 		return sum
+
+
+class BillingAddress(models.Model):
+	user = models.ForeignKey(User, on_delete=models.CASCADE)
+	street_address = models.CharField(max_length=100)
+	apartment_address = models.CharField(max_length=100)
+	country = CountryField(multiple=False)
+	zip = models.CharField(max_length=10)
+
+
+	def __str__(self):
+		return f'{self.user.username}'
