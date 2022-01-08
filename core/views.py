@@ -4,7 +4,12 @@ from django.utils import timezone
 from django.contrib import messages
 
 from .forms import CheckoutForm
-from .models import Item, OrderItem, Order
+from .models import Item, OrderItem, Order, BillingAddress, Payment
+
+import stripe
+
+# This is your test secret API key.
+stripe.api_key = 'sk_test_51KFRKhA4DXRyfULlrSdK7tXMBkowVabtTbmUJtNYwOjLdtFv8LKxBAxKLvWoFjayqlAXcZoFlHi5fulb1A1D8NKa00B6y8odr9'
 
 
 # Create your views here.
@@ -16,7 +21,11 @@ class HomeView(ListView):
 
 class OrderSummaryView(View):
 	def get(self, *args, **kwargs):
-		order = get_object_or_404(Order, user=self.request.user, ordered=False)
+		try:
+			order = get_object_or_404(Order, user=self.request.user, ordered=False)
+		except:
+			order = Order(user=self.request.user, ordered=False, ordered_date=timezone.now())
+			order.save()
 		print(order)
 		context = {
 			'order': order,
@@ -37,17 +46,116 @@ class CheckoutView(View):
 		return render(self.request, 'core/checkout.html', context)
 
 	def post(self, *args, **kwargs):
-		print("##################################")
 		form = CheckoutForm(self.request.POST or None)
-		print(self.request.POST)
-		if form.is_valid():
-			print(form.cleaned_data)
-			print("#####THIS FORM IS VALID#####")
-			return redirect('core:checkout')
-		messages.info(self.request, "THIS FORM INVALID....")
+		try:
+			order = Order.objects.get(user=self.request.user, ordered=False)
+			print("$$$$$$",order)
+			if form.is_valid():
+				print(form.cleaned_data)
+				print("#####THIS FORM IS VALID#####")
+				user = self.request.user
+				street_address = self.request.POST.get('street_address')
+				apartment_address = self.request.POST.get('apartment_address')
+				country = self.request.POST.get('country')
+				zip = self.request.POST.get('zip')
+				billing_address = BillingAddress(
+						user = user,
+						street_address=street_address,
+						apartment_address=apartment_address,
+						country=country,
+						zip=zip
+					)
+				billing_address.save()
+				order.billing_address = billing_address
+				order.save()
+				payment_option = self.request.POST.get("payment_option")
+				'''will be included when paypal works
+				if payment_option == "S":
+					return redirect('core:payment' , payment_option="Stripe")
+				elif payment_option == "P":
+					return redirect('core:payment' , payment_option="Paypal")
+				else:
+					messages.info(self.request, "SELECT A CORRECT PAYMENT-OPTION...")
+					return redirect('core:checkout')
+				'''
+				YOUR_DOMAIN = "http://127.0.0.1:8000/"
+				try:
+					checkout_session = stripe.checkout.Session.create(
+					    line_items=[
+							{
+								# Provide the exact Price ID (for example, pr_1234) of the product you want to sell
+								'price_data': {
+									'currency':'usd',
+									'product_data': {
+										'name':'test100',
+										'description':'test100 description'
+									},
+									'unit_amount':5000
+								},
+								'quantity': 1,
+							},
+						],
+						mode='payment',
+						success_url=YOUR_DOMAIN + 'success/',
+						cancel_url=YOUR_DOMAIN + 'cancel/',
+					)
+
+					# TODO: edite the total amount in payment
+					payment = Payment()
+					payment.stripe_charge_id = checkout_session.id
+					payment.user = self.request.user
+					payment.amount = 10.5
+					payment.save()
+
+					# adding the payment into the order and set the order state to ordered
+					order.ordered = True
+					order.payment = payment
+					order.save()
+
+					# setting the order_items state to ordered
+					order_items = order.items.all()
+					order_items.bulk_update(ordered=True)
+
+
+				except Exception as e:
+					print(e)
+
+				return redirect(checkout_session.url, code=303)
+				print("##################################")
+		except Exception as e:
+			print(e)
+			messages.info(self.request, "THERE IS NO ACTIVE ORDER")
+			return redirect("core:order-summary")
+
+		messages.info(self.request, "THERE IS A PROBLEM....")
 		return redirect('core:checkout')
 
+'''
+class PaymentView(View):
+	def get(self, *args, **kwagrs):
+		return render(self.request, "core/stripe_checkout.html")
 
+	def post(self, *args, **kwargs):
+		print("#########")
+		YOUR_DOMAIN = "http://127.0.0.1:8000/"
+		try:
+			checkout_session = stripe.checkout.Session.create(
+			    line_items=[
+					{
+						# Provide the exact Price ID (for example, pr_1234) of the product you want to sell
+						'price': 'price_1KFSTjA4DXRyfULlCr276pnu',
+						'quantity': 1,
+					},
+				],
+				mode='payment',
+				success_url=YOUR_DOMAIN + '/success/',
+				cancel_url=YOUR_DOMAIN + '/cancel/',
+			)
+		except Exception as e:
+			print(e)
+
+		return redirect(checkout_session.url, code=303)
+'''
 
 def add_to_cart(request, pk):
 	redirect_to = request.GET.get('redirect_to', 'core:product')

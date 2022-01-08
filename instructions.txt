@@ -1,1 +1,5 @@
-add to item ( category - label) with choices
+- add payment
+- add coupon
+- make the checkout coupon include
+- validate the order billing address before the payment
+- checkout table ( add the if cooupon row)
