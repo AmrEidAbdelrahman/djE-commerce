@@ -3,8 +3,8 @@ from django.views.generic import ListView, DetailView, View
 from django.utils import timezone
 from django.contrib import messages
 
-from .forms import CheckoutForm
-from .models import Item, OrderItem, Order, BillingAddress, Payment, Coupon
+from .forms import CheckoutForm, RefundForm
+from .models import Item, OrderItem, Order, Address, Payment, Coupon, Refund
 
 import stripe
 
@@ -46,33 +46,95 @@ class CheckoutView(View):
 				'form': form,
 				'order':order
 			}
+			try:
+				default_shipping = Address.objects.filter(user=self.request.user, default=True, address_type='S')[0]
+				context.update({'shipping_address':default_shipping})
+			except:
+				pass
+			try:
+				default_billing = Address.objects.filter(user=self.request.user, default=True, address_type='B')[0]
+				context.update({'billing_address':default_billing})
+			except:
+				pass
+			print(context)
 			return render(self.request, 'core/checkout.html', context)
-		except:
+		except Exception as e:
+			print(e)
 			# TODO: redirect with error message
-			messages.info(self.request, "WHAT IS WRONG ?")
-			return render(self.request, 'core/checkout.html', context)
+			messages.info(self.request, "NO ACTIVE ORDERs")
+			return redirect("core:home-page")
 	def post(self, *args, **kwargs):
+
+		shipping_as_billing = self.request.POST.get('shipping_as_billing')
+		set_default_billing = self.request.POST.get('set_default_billing')
+		use_default_billing = self.request.POST.get('use_default_billing')
+
+		set_default_shipping = self.request.POST.get('set_default_shipping')
+		use_default_shipping = self.request.POST.get('use_default_shipping')
+
 		form = CheckoutForm(self.request.POST or None)
 		try:
 			order = Order.objects.get(user=self.request.user, ordered=False)
-			print("$$$$$$",order)
 			if form.is_valid():
 				print(form.cleaned_data)
 				print("#####THIS FORM IS VALID#####")
 				user = self.request.user
-				street_address = self.request.POST.get('street_address')
-				apartment_address = self.request.POST.get('apartment_address')
-				country = self.request.POST.get('country')
-				zip = self.request.POST.get('zip')
-				billing_address = BillingAddress(
-						user = user,
-						street_address=street_address,
-						apartment_address=apartment_address,
-						country=country,
-						zip=zip
-					)
-				billing_address.save()
+
+				if use_default_billing:
+					try:
+						billing_address = Address.objects.get(user=user, default=True, address_type="B")
+					except:
+						messages.error(self.request, "you have no default billing address")
+						return redirect('core:checkout')
+				else:
+					billing_address1 = self.request.POST.get('billing_address1')
+					billing_address2 = self.request.POST.get('billing_address2')
+					billing_country = self.request.POST.get('billing_country')
+					billing_zip = self.request.POST.get('billing_zip')
+					billing_address = Address(
+							user = user,
+							street_address=billing_address1,
+							apartment_address=billing_address2,
+							country=billing_country,
+							zip=billing_zip,
+							address_type="B"
+						)
+					if set_default_billing:
+						billing_address.default = True
+					billing_address.save()
+					if shipping_as_billing:
+						shipping_address = billing_address
+						shipping_address.id = None
+						shipping_address.address_type = "S"
+						shipping_address.save()
+
+				if not shipping_as_billing:
+					if use_default_shipping:
+						try:
+							shipping_address = Address.objects.get(user=user, default=True, address_type="B")
+						except:
+							messages.error(self.request, "you have no default shipping address")
+							return redirect('core:checkout')
+					else:
+						shipping_address1 = self.request.POST.get('shipping_address1')
+						shipping_address2 = self.request.POST.get('shipping_address2')
+						shipping_country = self.request.POST.get('shipping_country')
+						shipping_zip = self.request.POST.get('shipping_zip')
+						shipping_address = Address(
+								user = user,
+								street_address=shipping_address1,
+								apartment_address=shipping_address2,
+								country=shipping_country,
+								zip=shipping_zip,
+								address_type="S"
+							)
+						if set_default_shipping:
+							shipping_address.default = True
+						shipping_address.save()
+
+
 				order.billing_address = billing_address
+				order.shipping_address = shipping_address
 				order.save()
 				payment_option = self.request.POST.get("payment_option")
 				'''will be included when paypal works
@@ -114,7 +176,8 @@ class CheckoutView(View):
 					payment.save()
 
 					# adding the payment into the order and set the order state to ordered
-					order.ordered = True
+					# TODO: handle the stripe webhook
+					# order.ordered = True
 					order.payment = payment
 					order.save()
 
@@ -136,32 +199,29 @@ class CheckoutView(View):
 		messages.info(self.request, "THERE IS A PROBLEM....")
 		return redirect('core:checkout')
 
-'''
-class PaymentView(View):
-	def get(self, *args, **kwagrs):
-		return render(self.request, "core/stripe_checkout.html")
+
+class RefundView(View):
+	def get(self, *args, **kwargs):
+		form = RefundForm()
+		context = {
+			'form': form
+		}
+		return render(self.request, "core/refund_request.html", context)
 
 	def post(self, *args, **kwargs):
-		print("#########")
-		YOUR_DOMAIN = "http://127.0.0.1:8000/"
+		ref_code = self.request.POST.get("ref_code")
+		description = self.request.POST.get("description")
 		try:
-			checkout_session = stripe.checkout.Session.create(
-			    line_items=[
-					{
-						# Provide the exact Price ID (for example, pr_1234) of the product you want to sell
-						'price': 'price_1KFSTjA4DXRyfULlCr276pnu',
-						'quantity': 1,
-					},
-				],
-				mode='payment',
-				success_url=YOUR_DOMAIN + '/success/',
-				cancel_url=YOUR_DOMAIN + '/cancel/',
-			)
-		except Exception as e:
-			print(e)
-
-		return redirect(checkout_session.url, code=303)
-'''
+			order = Order.objects.get(user=self.request.user, ref_code=ref_code , ordered=True)
+			order.refund_requested = True
+			order.save()
+			refund = Refund(order_ref_code=ref_code, description=description)
+			refund.save()
+			messages.success(self.request, f"your request have submited successfully")
+			return redirect('core:request-refund')
+		except:
+			messages.error(self.request, f"You have no order with this ref_code {ref_code}")
+			return redirect('core:request-refund')
 
 def add_coupon(request):
 	try:

@@ -9,6 +9,7 @@ urlpatterns = [
 	path('checkout/', core_views.CheckoutView.as_view(), name='checkout'),
 	path('add-coupon/', core_views.add_coupon, name='add-coupon'),
 	path('remove-coupon/', core_views.remove_coupon, name='remove-coupon'),
+	path('request-refund/', core_views.RefundView.as_view(), name='request-refund'),
 
 	path('product/<pk>/', core_views.ProductDetailView.as_view(), name="product"),
 

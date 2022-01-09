@@ -1,5 +1,30 @@
+- edit the order admin [ list_display , list_display, search_fields ]
+- add ref_code to the order 
+- create user profile with the stripe_customer_id to use it in payment
+- save the stripe_customer_id as a checkbox [need to edit the stripe payment method of visit]
+---------------------------------
+- build a refund model - done
+- build add refund form and model - done
+- retrieve the form on get request - done
+- proccess the form post request - done
+
+- edit the address model - done
+- edit the html ckeckout form to billing + shipping + payment divs - done
+- edit the python form - done
+- handle the logic of save as default - done
+- handle the logic of use default - done
+- handle the logic of billing as shipping - done
+- javascript to toggle the divs on checkboxes - done
+------------------
 - add payment
 - add coupon
 - make the checkout coupon include
 - validate the order billing address before the payment
 - checkout table ( add the if cooupon row)
+
+
+
+====================================TODO LATER==========================================
+user prev. order page
+user refund status page
+the refund request check its the first one

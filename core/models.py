@@ -18,6 +18,10 @@ LABELCHOICES = (
 	("D","danger"),
 	("S","secondary")
 )
+ADDRESS_CHOICES = (
+	("B","billing"),
+	("S","shipping")
+)
 
 class Item(models.Model):
 	title = models.CharField(max_length=100)
@@ -69,13 +73,18 @@ class OrderItem(models.Model):
 
 class Order(models.Model):
 	user = models.ForeignKey(User, on_delete=models.CASCADE)
+	ref_code = models.CharField(max_length=20, null=True, blank=True)
 	items = models.ManyToManyField(OrderItem)
 	start_date = models.DateTimeField(auto_now_add=True)
 	ordered_date = models.DateTimeField()
 	ordered = models.BooleanField(default=False)
-	billing_address = models.ForeignKey('BillingAddress', on_delete=models.SET_NULL, null=True, blank=True)
+	billing_address = models.ForeignKey('Address', related_name='billing_address', on_delete=models.SET_NULL, null=True, blank=True)
+	shipping_address = models.ForeignKey('Address', related_name='shipping_address', on_delete=models.SET_NULL, null=True, blank=True)
 	payment = models.ForeignKey('Payment', on_delete=models.SET_NULL, null=True, blank=True)
 	coupon = models.ForeignKey('Coupon', on_delete=models.SET_NULL, null=True, blank=True)
+
+	refund_requested = models.BooleanField(default=False)
+	refund_accepted = models.BooleanField(default=False)
 
 	def __str__(self):
 		return f'{self.user.username} on {self.start_date}'
@@ -98,13 +107,14 @@ class Order(models.Model):
 		return True
 
 
-class BillingAddress(models.Model):
+class Address(models.Model):
 	user = models.ForeignKey(User, on_delete=models.CASCADE)
 	street_address = models.CharField(max_length=100)
 	apartment_address = models.CharField(max_length=100)
 	country = CountryField(multiple=False)
 	zip = models.CharField(max_length=10)
-
+	default = models.BooleanField(default=False)
+	address_type = models.CharField(max_length=1, default="B", choices=ADDRESS_CHOICES)
 
 	def __str__(self):
 		return f'{self.user.username}'
@@ -127,3 +137,10 @@ class Coupon(models.Model):
 
 	def __str__(self):
 		return f'{self.coupon}'
+
+
+class Refund(models.Model):
+	order_ref_code = models.CharField(max_length=20)
+	description = models.TextField()
+	request_date = models.DateTimeField(auto_now_add=True)
+	closed = models.BooleanField(default=False)
