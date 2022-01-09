@@ -4,7 +4,7 @@ from django.utils import timezone
 from django.contrib import messages
 
 from .forms import CheckoutForm
-from .models import Item, OrderItem, Order, BillingAddress, Payment
+from .models import Item, OrderItem, Order, BillingAddress, Payment, Coupon
 
 import stripe
 
@@ -39,12 +39,18 @@ class ProductDetailView(DetailView):
 
 class CheckoutView(View):
 	def get(self, *args, **kwargs):
-		form = CheckoutForm()
-		context = {
-			'form': form
-		}
-		return render(self.request, 'core/checkout.html', context)
-
+		try:
+			order = Order.objects.get(user=self.request.user, ordered=False)
+			form = CheckoutForm()
+			context = {
+				'form': form,
+				'order':order
+			}
+			return render(self.request, 'core/checkout.html', context)
+		except:
+			# TODO: redirect with error message
+			messages.info(self.request, "WHAT IS WRONG ?")
+			return render(self.request, 'core/checkout.html', context)
 	def post(self, *args, **kwargs):
 		form = CheckoutForm(self.request.POST or None)
 		try:
@@ -156,6 +162,27 @@ class PaymentView(View):
 
 		return redirect(checkout_session.url, code=303)
 '''
+
+def add_coupon(request):
+	try:
+		order = Order.objects.get(user=request.user, ordered=False)
+		coupon_entered = request.POST.get('coupon')
+		print(coupon_entered)
+		coupon = Coupon.objects.get(coupon=coupon_entered)
+		order.coupon = coupon
+		order.save()
+		return redirect("core:checkout")
+	except Exception as e:
+		print(e)
+		messages.info(request, "INVALID")
+		return redirect("core:checkout")
+
+def remove_coupon(request):
+	order = Order.objects.get(user=request.user, ordered=False)
+	order.coupon = None
+	order.save()
+	return redirect("core:checkout")
+
 
 def add_to_cart(request, pk):
 	redirect_to = request.GET.get('redirect_to', 'core:product')

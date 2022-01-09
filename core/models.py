@@ -61,6 +61,11 @@ class OrderItem(models.Model):
 	def get_total_disc(self):
 		return int(self.get_total_price - self.get_total_price_after_disc)
 
+	def get_price(self):
+		if self.item.price_after_disc:
+			return self.get_total_price_after_disc()
+		else:
+			return self.get_total_price()
 
 class Order(models.Model):
 	user = models.ForeignKey(User, on_delete=models.CASCADE)
@@ -70,6 +75,7 @@ class Order(models.Model):
 	ordered = models.BooleanField(default=False)
 	billing_address = models.ForeignKey('BillingAddress', on_delete=models.SET_NULL, null=True, blank=True)
 	payment = models.ForeignKey('Payment', on_delete=models.SET_NULL, null=True, blank=True)
+	coupon = models.ForeignKey('Coupon', on_delete=models.SET_NULL, null=True, blank=True)
 
 	def __str__(self):
 		return f'{self.user.username} on {self.start_date}'
@@ -82,8 +88,14 @@ class Order(models.Model):
 				sum += order_item.get_total_price_after_disc()
 			else:
 				sum += order_item.get_total_price()
-
+		if self.coupon:
+			sum -= self.coupon.amount
 		return sum
+
+	def has_coupon(self):
+		if self.coupon == None:
+			return False
+		return True
 
 
 class BillingAddress(models.Model):
@@ -106,3 +118,12 @@ class Payment(models.Model):
 
 	def __str__(self):
 		return f'{self.user.username}'
+
+
+class Coupon(models.Model):
+	coupon = models.CharField(max_length=20)
+	amount = models.FloatField(default=0)
+
+
+	def __str__(self):
+		return f'{self.coupon}'

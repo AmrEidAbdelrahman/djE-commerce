@@ -57,6 +57,12 @@
           </tr>
           {% endfor %}
           {% if order.get_order_total_price %}
+            {% if order.has_coupon %}
+              <tr>
+                <td colspan="5"><b>Coupon</b></td>
+                <td><b>-${{ order.coupon.amount }}</b></td>
+              </tr>  
+            {% endif %}
             <tr>
               <td colspan="5"><b>Total Price</b></td>
               <td><b>{{ order.get_order_total_price }}</b></td>
