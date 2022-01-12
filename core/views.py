@@ -6,6 +6,8 @@ from django.contrib import messages
 from .forms import CheckoutForm, RefundForm
 from .models import Item, OrderItem, Order, Address, Payment, Coupon, Refund
 
+import string
+import random
 import stripe
 
 # This is your test secret API key.
@@ -178,6 +180,7 @@ class CheckoutView(View):
 					# adding the payment into the order and set the order state to ordered
 					# TODO: handle the stripe webhook
 					# order.ordered = True
+					# order.ref_code = random.randint(???)
 					order.payment = payment
 					order.save()
 
