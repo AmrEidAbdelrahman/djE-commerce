@@ -31,3 +31,15 @@ the refund request check its the first one
 the user Profile
 edit the add to cart to accept number of items
 page of fav items
+https://assessment.testgorilla.com/testtaker/test/766abdcc-39d4-4f82-b828-2027e00e50d7
+
+
+hello,
+iam amr eid from cairo, i'm a fresh graduat from ain shams university.
+i'm looking for a opportunity to work with a team and gain prof. experience and work on real world projects.
+i'm a fast learner and love to learn new techs every day.
+i've a good knowledge in back-end, iknow django framework and worked on many projects and built many APIs with it and also i know html and css and bootstrap and js as a front-end basics.  
+have a solid knowledge in SQL and database and can work on different DBMSs.
+i also have a previous experience as a data analysis and know how to build and train ml models.
+my graduation project was a ml model to recognize a hand drawn shapes in 2D using kineckt.
+if u consider me in this internshipe i will do my best to learn with you and be a part of your company.
